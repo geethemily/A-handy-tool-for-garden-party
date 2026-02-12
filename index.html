@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Interactive Garden Party Planner</title>
+<title>Garden Party Planner with Section Budgets</title>
 
 <style>
 body {
@@ -44,7 +44,7 @@ header p {
     box-shadow: 0 8px 20px rgba(0,0,0,0.05);
 }
 
-.section h2 {
+.section h2, .section h3 {
     margin-top: 0;
     color: #3b5d3b;
 }
@@ -85,12 +85,12 @@ input[type="text"], input[type="number"] {
 }
 
 button {
-    padding: 10px 20px;
-    margin-top: 10px;
+    padding: 8px 16px;
+    margin-top: 8px;
     background-color: #3b5d3b;
     color: white;
     border: none;
-    border-radius: 8px;
+    border-radius: 6px;
     cursor: pointer;
     transition: background-color 0.3s ease;
 }
@@ -100,9 +100,9 @@ button:hover {
 }
 
 .total-cost {
-    margin-top: 15px;
+    margin-top: 10px;
     font-weight: bold;
-    font-size: 1.1rem;
+    font-size: 1rem;
 }
 </style>
 </head>
@@ -111,44 +111,15 @@ button:hover {
 
 <header>
     <h1>Interactive Garden Party Planner</h1>
-    <p>Check off tasks and manage your budget for the perfect garden party!</p>
+    <p>Manage tasks and budgets for each timeline stage!</p>
 </header>
 
-<div class="container">
-
-    <!-- Task Checklist Section -->
-    <div class="section">
-        <h2>Tasks Timeline</h2>
-        <div id="tasks-list">
-            <!-- Preloaded tasks will appear here -->
-        </div>
-    </div>
-
-    <!-- Budget Section -->
-    <div class="section">
-        <h2>Budget Planner</h2>
-        <table id="budget-table">
-            <thead>
-                <tr>
-                    <th>Item</th>
-                    <th>Estimated Cost ($)</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Budget items appear here -->
-            </tbody>
-        </table>
-        <input type="text" id="item-name" placeholder="Item name">
-        <input type="number" id="item-cost" placeholder="Estimated cost">
-        <button onclick="addBudgetItem()">Add Item</button>
-        <div class="total-cost" id="total-cost">Total: $0</div>
-    </div>
-
+<div class="container" id="planner-container">
+    <!-- Timeline sections will be injected here -->
 </div>
 
 <script>
-// ===== Preloaded Tasks =====
+// ===== Preloaded Timeline Tasks =====
 const tasksData = {
     "1–2 Weeks Before: Planning & Foundations": [
         "Decide the purpose & vibe (casual brunch, evening cocktails, BBQ, etc.)",
@@ -223,17 +194,18 @@ const tasksData = {
     ]
 };
 
-// ===== Render Tasks =====
-const tasksList = document.getElementById("tasks-list");
+const container = document.getElementById("planner-container");
 
+// ===== Render Each Section =====
 for (let section in tasksData) {
     const sectionDiv = document.createElement("div");
     sectionDiv.className = "section";
     
-    const h3 = document.createElement("h3");
-    h3.textContent = section;
-    sectionDiv.appendChild(h3);
+    const h2 = document.createElement("h2");
+    h2.textContent = section;
+    sectionDiv.appendChild(h2);
     
+    // Task list
     tasksData[section].forEach(task => {
         const taskDiv = document.createElement("div");
         taskDiv.className = "task-item";
@@ -245,59 +217,77 @@ for (let section in tasksData) {
         taskDiv.appendChild(span);
         sectionDiv.appendChild(taskDiv);
     });
-    
-    tasksList.appendChild(sectionDiv);
-}
 
-// ===== Budget Planner =====
-const budgetTableBody = document.querySelector("#budget-table tbody");
-const totalCostEl = document.getElementById("total-cost");
-let totalCost = 0;
+    // ===== Budget Table for This Section =====
+    const budgetTable = document.createElement("table");
+    const thead = document.createElement("thead");
+    thead.innerHTML = `
+        <tr>
+            <th>Item</th>
+            <th>Estimated Cost ($)</th>
+            <th>Action</th>
+        </tr>`;
+    budgetTable.appendChild(thead);
 
-function addBudgetItem() {
-    const nameInput = document.getElementById("item-name");
-    const costInput = document.getElementById("item-cost");
-    
-    const name = nameInput.value.trim();
-    const cost = parseFloat(costInput.value);
-    
-    if(name === "" || isNaN(cost)) return;
-    
-    const row = document.createElement("tr");
-    
-    const itemCell = document.createElement("td");
-    itemCell.textContent = name;
-    
-    const costCell = document.createElement("td");
-    costCell.textContent = cost.toFixed(2);
-    
-    const actionCell = document.createElement("td");
-    const deleteBtn = document.createElement("button");
-    deleteBtn.textContent = "Delete";
-    deleteBtn.style.backgroundColor = "#c94b4b";
-    deleteBtn.style.margin = "0";
-    deleteBtn.onclick = () => {
-        budgetTableBody.removeChild(row);
-        totalCost -= cost;
-        updateTotalCost();
+    const tbody = document.createElement("tbody");
+    budgetTable.appendChild(tbody);
+
+    sectionDiv.appendChild(budgetTable);
+
+    // Input fields
+    const inputDiv = document.createElement("div");
+    inputDiv.style.marginTop = "10px";
+    inputDiv.innerHTML = `
+        <input type="text" placeholder="Item name" class="budget-item-name">
+        <input type="number" placeholder="Estimated cost" class="budget-item-cost">
+        <button>Add Item</button>
+        <div class="total-cost">Total: $0</div>
+    `;
+    sectionDiv.appendChild(inputDiv);
+
+    // Add event listener for the button
+    const addBtn = inputDiv.querySelector("button");
+    const itemNameInput = inputDiv.querySelector(".budget-item-name");
+    const itemCostInput = inputDiv.querySelector(".budget-item-cost");
+    const totalCostEl = inputDiv.querySelector(".total-cost");
+
+    let sectionTotal = 0;
+
+    addBtn.onclick = () => {
+        const name = itemNameInput.value.trim();
+        const cost = parseFloat(itemCostInput.value);
+        if (name === "" || isNaN(cost)) return;
+
+        const row = document.createElement("tr");
+        const nameCell = document.createElement("td");
+        nameCell.textContent = name;
+        const costCell = document.createElement("td");
+        costCell.textContent = cost.toFixed(2);
+        const actionCell = document.createElement("td");
+        const delBtn = document.createElement("button");
+        delBtn.textContent = "Delete";
+        delBtn.style.backgroundColor = "#c94b4b";
+        delBtn.onclick = () => {
+            tbody.removeChild(row);
+            sectionTotal -= cost;
+            totalCostEl.textContent = `Total: $${sectionTotal.toFixed(2)}`;
+        };
+        actionCell.appendChild(delBtn);
+
+        row.appendChild(nameCell);
+        row.appendChild(costCell);
+        row.appendChild(actionCell);
+
+        tbody.appendChild(row);
+
+        sectionTotal += cost;
+        totalCostEl.textContent = `Total: $${sectionTotal.toFixed(2)}`;
+
+        itemNameInput.value = "";
+        itemCostInput.value = "";
     };
-    actionCell.appendChild(deleteBtn);
-    
-    row.appendChild(itemCell);
-    row.appendChild(costCell);
-    row.appendChild(actionCell);
-    
-    budgetTableBody.appendChild(row);
-    
-    totalCost += cost;
-    updateTotalCost();
-    
-    nameInput.value = "";
-    costInput.value = "";
-}
 
-function updateTotalCost() {
-    totalCostEl.textContent = `Total: $${totalCost.toFixed(2)}`;
+    container.appendChild(sectionDiv);
 }
 </script>
 
