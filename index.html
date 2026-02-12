@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Garden Party Planner with Auto-Save and Summary</title>
+<title>Garden Party Planner with Have/Need Lists</title>
 
 <style>
 body {
@@ -43,7 +43,7 @@ header p {
     box-shadow: 0 8px 20px rgba(0,0,0,0.05);
 }
 
-/* Color-coded cards for each timeline */
+/* Color-coded cards */
 .section:nth-child(odd) { background-color: #eaf4ea; }
 .section:nth-child(even) { background-color: #d1e7d1; }
 
@@ -63,7 +63,7 @@ header p {
     margin-right: 10px;
 }
 
-/* Budget table */
+/* Budget & lists tables */
 table {
     width: 100%;
     border-collapse: collapse;
@@ -85,6 +85,7 @@ input[type="text"], input[type="number"] {
     padding: 6px;
     border-radius: 4px;
     border: 1px solid #ccc;
+    margin-top: 5px;
 }
 
 button {
@@ -116,6 +117,19 @@ button:hover {
     margin-bottom: 25px;
     text-align: center;
 }
+
+/* Section lists */
+.list-container {
+    margin-top: 15px;
+}
+
+.list-container ul {
+    padding-left: 20px;
+}
+
+.list-container li {
+    margin-bottom: 5px;
+}
 </style>
 </head>
 
@@ -123,14 +137,12 @@ button:hover {
 
 <header>
     <h1>Interactive Garden Party Planner</h1>
-    <p>Auto-save tasks & budgets, with overall cost summary!</p>
+    <p>Track tasks, budgets, and items you have/need with auto-save!</p>
 </header>
 
 <div class="container">
     <div id="overall-summary">Total Cost Across All Timelines: $0</div>
-    <div id="planner-container">
-        <!-- Timeline sections injected here -->
-    </div>
+    <div id="planner-container"></div>
 </div>
 
 <script>
@@ -230,16 +242,10 @@ for (let section in tasksData) {
         taskDiv.className = "task-item";
         const checkbox = document.createElement("input");
         checkbox.type = "checkbox";
-
-        // Load saved checkbox state
         if (savedData[section] && savedData[section].tasks && savedData[section].tasks[idx]) {
             checkbox.checked = savedData[section].tasks[idx];
         }
-
-        checkbox.onchange = () => {
-            saveTasks();
-        };
-
+        checkbox.onchange = saveTasks;
         const span = document.createElement("span");
         span.textContent = task;
         taskDiv.appendChild(checkbox);
@@ -247,40 +253,37 @@ for (let section in tasksData) {
         sectionDiv.appendChild(taskDiv);
     });
 
-    // Budget Table
+    // ===== Budget Table =====
     const budgetTable = document.createElement("table");
-    const thead = document.createElement("thead");
-    thead.innerHTML = `
-        <tr>
-            <th>Item</th>
-            <th>Estimated Cost ($)</th>
-            <th>Action</th>
-        </tr>`;
-    budgetTable.appendChild(thead);
-
-    const tbody = document.createElement("tbody");
-    budgetTable.appendChild(tbody);
+    budgetTable.innerHTML = `
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Estimated Cost ($)</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    `;
     sectionDiv.appendChild(budgetTable);
+    const tbody = budgetTable.querySelector("tbody");
 
-    // Input fields for budget
-    const inputDiv = document.createElement("div");
-    inputDiv.style.marginTop = "10px";
-    inputDiv.innerHTML = `
+    const budgetInputDiv = document.createElement("div");
+    budgetInputDiv.style.marginTop = "10px";
+    budgetInputDiv.innerHTML = `
         <input type="text" placeholder="Item name" class="budget-item-name">
         <input type="number" placeholder="Estimated cost" class="budget-item-cost">
         <button>Add Item</button>
         <div class="total-cost">Total: $0</div>
     `;
-    sectionDiv.appendChild(inputDiv);
+    sectionDiv.appendChild(budgetInputDiv);
 
-    const addBtn = inputDiv.querySelector("button");
-    const itemNameInput = inputDiv.querySelector(".budget-item-name");
-    const itemCostInput = inputDiv.querySelector(".budget-item-cost");
-    const totalCostEl = inputDiv.querySelector(".total-cost");
-
+    const addBudgetBtn = budgetInputDiv.querySelector("button");
+    const itemNameInput = budgetInputDiv.querySelector(".budget-item-name");
+    const itemCostInput = budgetInputDiv.querySelector(".budget-item-cost");
+    const totalCostEl = budgetInputDiv.querySelector(".total-cost");
     let sectionTotal = 0;
 
-    // Load saved budget data
     if (savedData[section] && savedData[section].budget) {
         savedData[section].budget.forEach(b => {
             const row = createBudgetRow(b.name, b.cost, tbody, totalCostEl);
@@ -290,61 +293,105 @@ for (let section in tasksData) {
         totalCostEl.textContent = `Total: $${sectionTotal.toFixed(2)}`;
     }
 
-    // Add new budget item
-    addBtn.onclick = () => {
+    addBudgetBtn.onclick = () => {
         const name = itemNameInput.value.trim();
         const cost = parseFloat(itemCostInput.value);
-        if (name === "" || isNaN(cost)) return;
-
+        if (!name || isNaN(cost)) return;
         const row = createBudgetRow(name, cost, tbody, totalCostEl);
         tbody.appendChild(row);
         sectionTotal += cost;
         totalCostEl.textContent = `Total: $${sectionTotal.toFixed(2)}`;
-
         itemNameInput.value = "";
         itemCostInput.value = "";
+        saveTasks();
+    };
+
+    // ===== Things You Have / Need Lists =====
+    const listsContainer = document.createElement("div");
+    listsContainer.className = "list-container";
+    listsContainer.innerHTML = `
+        <h3>Things You Have</h3>
+        <ul class="have-list"></ul>
+        <input type="text" placeholder="Add item to 'Have'" class="have-input">
+        <button class="have-add">Add</button>
+        <h3>Things to Buy / Rent</h3>
+        <ul class="need-list"></ul>
+        <input type="text" placeholder="Add item to 'Need'" class="need-input">
+        <button class="need-add">Add</button>
+    `;
+    sectionDiv.appendChild(listsContainer);
+
+    // Load saved have/need lists
+    const haveListEl = listsContainer.querySelector(".have-list");
+    const needListEl = listsContainer.querySelector(".need-list");
+    const haveInput = listsContainer.querySelector(".have-input");
+    const needInput = listsContainer.querySelector(".need-input");
+    const haveAddBtn = listsContainer.querySelector(".have-add");
+    const needAddBtn = listsContainer.querySelector(".need-add");
+
+    if (savedData[section] && savedData[section].have) {
+        savedData[section].have.forEach(item => {
+            const li = document.createElement("li");
+            li.textContent = item;
+            haveListEl.appendChild(li);
+        });
+    }
+    if (savedData[section] && savedData[section].need) {
+        savedData[section].need.forEach(item => {
+            const li = document.createElement("li");
+            li.textContent = item;
+            needListEl.appendChild(li);
+        });
+    }
+
+    haveAddBtn.onclick = () => {
+        const value = haveInput.value.trim();
+        if (!value) return;
+        const li = document.createElement("li");
+        li.textContent = value;
+        haveListEl.appendChild(li);
+        haveInput.value = "";
+        saveTasks();
+    };
+
+    needAddBtn.onclick = () => {
+        const value = needInput.value.trim();
+        if (!value) return;
+        const li = document.createElement("li");
+        li.textContent = value;
+        needListEl.appendChild(li);
+        needInput.value = "";
         saveTasks();
     };
 
     container.appendChild(sectionDiv);
 }
 
-// ===== Create Budget Row Function =====
+// ===== Create Budget Row =====
 function createBudgetRow(name, cost, tbody, totalCostEl) {
     const row = document.createElement("tr");
-    const nameCell = document.createElement("td");
-    nameCell.textContent = name;
-    const costCell = document.createElement("td");
-    costCell.textContent = cost.toFixed(2);
-    const actionCell = document.createElement("td");
-    const delBtn = document.createElement("button");
-    delBtn.textContent = "Delete";
-    delBtn.style.backgroundColor = "#c94b4b";
-    delBtn.onclick = () => {
+    row.innerHTML = `<td>${name}</td><td>${cost.toFixed(2)}</td><td><button style="background-color:#c94b4b;">Delete</button></td>`;
+    row.querySelector("button").onclick = () => {
         tbody.removeChild(row);
-        updateOverallSummary();
         saveTasks();
     };
-    actionCell.appendChild(delBtn);
-    row.appendChild(nameCell);
-    row.appendChild(costCell);
-    row.appendChild(actionCell);
     return row;
 }
 
-// ===== Save Tasks & Budgets to localStorage =====
+// ===== Save All Data =====
 function saveTasks() {
     const sections = container.querySelectorAll(".section");
     const data = {};
     sections.forEach(sec => {
         const title = sec.querySelector("h2").textContent;
         const tasks = Array.from(sec.querySelectorAll(".task-item input[type='checkbox']")).map(cb => cb.checked);
-        const budgetRows = Array.from(sec.querySelectorAll("tbody tr"));
-        const budget = budgetRows.map(r => ({
+        const budgetRows = Array.from(sec.querySelectorAll("tbody tr")).map(r => ({
             name: r.children[0].textContent,
             cost: parseFloat(r.children[1].textContent)
         }));
-        data[title] = { tasks, budget };
+        const haveItems = Array.from(sec.querySelectorAll(".have-list li")).map(li => li.textContent);
+        const needItems = Array.from(sec.querySelectorAll(".need-list li")).map(li => li.textContent);
+        data[title] = { tasks, budget: budgetRows, have: haveItems, need: needItems };
     });
     localStorage.setItem("gardenPlannerData", JSON.stringify(data));
     updateOverallSummary();
@@ -362,7 +409,6 @@ function updateOverallSummary() {
     overallSummaryEl.textContent = `Total Cost Across All Timelines: $${total.toFixed(2)}`;
 }
 
-// Initial summary update
 updateOverallSummary();
 </script>
 
