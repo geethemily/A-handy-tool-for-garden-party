@@ -47,7 +47,7 @@ button:hover{background-color:#2f4b2f;}
 <body>
 <header>
 <h1>Interactive Garden Party Planner</h1>
-<p>Tasks, Budget, Have/Need Lists, Full Menu Management, Auto-save, PDF Export</p>
+<p>Tasks, Budget, Have/Need Lists, Menu Creation, Auto-save, PDF Export</p>
 </header>
 
 <div class="container">
@@ -60,67 +60,126 @@ button:hover{background-color:#2f4b2f;}
   <div class="menu-section" data-category="welcomeDrinks">
       <h3>Welcome Drinks</h3>
       <ul class="item-list"></ul>
-      <input type="text" placeholder="Add welcome drink">
-      <button>Add</button>
+      <input type="text" placeholder="Add welcome drink"><button>Add</button>
   </div>
   <div class="menu-section" data-category="appetizers">
       <h3>Appetizers / Starters</h3>
       <ul class="item-list"></ul>
-      <input type="text" placeholder="Add appetizer">
-      <button>Add</button>
+      <input type="text" placeholder="Add appetizer"><button>Add</button>
   </div>
   <div class="menu-section" data-category="salads">
       <h3>Salads & Light Bites</h3>
       <ul class="item-list"></ul>
-      <input type="text" placeholder="Add salad/light bite">
-      <button>Add</button>
+      <input type="text" placeholder="Add salad/light bite"><button>Add</button>
   </div>
   <div class="menu-section" data-category="mainOptions">
       <h3>Main Options</h3>
       <ul class="item-list"></ul>
-      <input type="text" placeholder="Add main option">
-      <button>Add</button>
+      <input type="text" placeholder="Add main option"><button>Add</button>
   </div>
   <div class="menu-section" data-category="desserts">
       <h3>Desserts</h3>
       <ul class="item-list"></ul>
-      <input type="text" placeholder="Add dessert">
-      <button>Add</button>
+      <input type="text" placeholder="Add dessert"><button>Add</button>
   </div>
   <div class="menu-section" data-category="extras">
       <h3>Extras / Grazing Table</h3>
       <ul class="item-list"></ul>
-      <input type="text" placeholder="Add extra item">
-      <button>Add</button>
+      <input type="text" placeholder="Add extra item"><button>Add</button>
   </div>
   <div class="menu-section" data-category="kidsMenu">
       <h3>Kids Menu</h3>
       <ul class="item-list"></ul>
-      <input type="text" placeholder="Add kids menu item">
-      <button>Add</button>
+      <input type="text" placeholder="Add kids menu item"><button>Add</button>
   </div>
 </div>
 
-<!-- Timeline Planner -->
 <div id="planner-container"></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
-// ===== Timeline Tasks =====
+// ===== Full Timeline Data =====
 const tasksData = {
-"1–2 Weeks Before: Planning & Foundations":["Decide purpose & vibe","Set date/time/guest count","Choose theme/color palette","Create rough budget","Plan menu","Check weather/backup plan","Make guest list & send invites","List what you have vs need"],
-"5–7 Days Before: Prep Mode":["Finalize menu & drinks","Shop non-perishables","Drinks & ice plan","Disposable items","Arrange rentals","Plan seating","Test lighting","Prepare playlist","Tidy garden"]
+"1–2 Weeks Before: Planning & Foundations": [
+"Decide purpose & vibe",
+"Set date/time/guest count",
+"Choose theme/color palette",
+"Create rough budget",
+"Plan menu",
+"Check weather/backup plan",
+"Make guest list & send invites",
+"List what you have vs need"
+],
+"5–7 Days Before: Prep Mode": [
+"Finalize menu & drinks",
+"Shop non-perishables",
+"Drinks & ice plan",
+"Disposable items",
+"Arrange rentals",
+"Plan seating",
+"Test lighting",
+"Prepare playlist",
+"Tidy garden"
+],
+"2–3 Days Before: Execution Begins": [
+"Grocery shop for fresh ingredients",
+"Clean outdoor space",
+"Clean bathrooms",
+"Clean kitchen",
+"Prep make-ahead foods",
+"Chill drinks early",
+"Iron / set aside table linens",
+"Charge speakers, lights, candles, power banks"
+],
+"1 Day Before: Set the Stage": [
+"Arrange tables and chairs",
+"Set up tablecloths, centerpieces, string lights/candles",
+"Prep serving trays & label dishes",
+"Final garden sweep",
+"Confirm RSVPs",
+"Lay out event-day checklist",
+"Get a good night’s sleep"
+],
+"Day Of – Morning": [
+"Light cleaning touch-ups",
+"Finish food prep",
+"Chill drinks & prep ice",
+"Set up drink station",
+"Place trash & recycling bins",
+"Do a walk-through of flow (entry → seating → food → drinks)"
+],
+"1 Hour Before Guests Arrive": [
+"Final table setting",
+"Food out / warming",
+"Background music on",
+"Candles/lights ready",
+"Change into hosting outfit",
+"Deep breath + mindset shift from manager → host"
+],
+"During the Party": [
+"Greet guests",
+"Refill drinks & food as needed",
+"Quietly manage timing",
+"Take photos / assign someone",
+"Let go of perfection"
+],
+"After the Party": [
+"Clear food safely",
+"Quick cleanup (trash, dishes soak)",
+"Leave deep cleaning for the next day",
+"Mentally note what worked & what didn’t"
+]
 };
 
-const container = document.getElementById("planner-container");
-const overallSummaryEl = document.getElementById("overall-summary");
-let savedData = JSON.parse(localStorage.getItem("gardenPlannerData"))||{};
+const container=document.getElementById("planner-container");
+const overallSummaryEl=document.getElementById("overall-summary");
+let savedData=JSON.parse(localStorage.getItem("gardenPlannerData"))||{};
 
-// ===== Render Timeline Sections =====
+// ===== Render Sections =====
 for(let section in tasksData){
-  const sectionDiv = document.createElement("div");
+  const sectionDiv=document.createElement("div");
   sectionDiv.className="section";
   const h2=document.createElement("h2");
   h2.textContent=section;
@@ -140,7 +199,7 @@ for(let section in tasksData){
     sectionDiv.appendChild(taskDiv);
   });
 
-  // Budget Table
+  // Budget
   const budgetTable=document.createElement("table");
   budgetTable.innerHTML=`<thead><tr><th>Item</th><th>Cost ($)</th><th>Action</th></tr></thead><tbody></tbody>`;
   sectionDiv.appendChild(budgetTable);
@@ -174,7 +233,7 @@ for(let section in tasksData){
     itemNameInput.value=""; itemCostInput.value=""; saveTasks();
   };
 
-  // Have/Need lists
+  // Have / Need
   const listsContainer=document.createElement("div");
   listsContainer.className="list-container";
   listsContainer.innerHTML=`<h3>Things You Have</h3><ul class="have-list"></ul>
@@ -188,6 +247,29 @@ for(let section in tasksData){
   const needInput=listsContainer.querySelector(".need-input");
   listsContainer.querySelector(".have-add").onclick=()=>{if(haveInput.value.trim()){const li=document.createElement("li");li.textContent=haveInput.value;haveListEl.appendChild(li);haveInput.value="";saveTasks();}};
   listsContainer.querySelector(".need-add").onclick=()=>{if(needInput.value.trim()){const li=document.createElement("li");li.textContent=needInput.value;needListEl.appendChild(li);needInput.value="";saveTasks();}};
+
+  // Collapsible Menu per Section
+  const menuBtn=document.createElement("button");
+  menuBtn.className="collapsible";
+  menuBtn.textContent="Menu Creation";
+  sectionDiv.appendChild(menuBtn);
+  const menuContent=document.createElement("div");
+  menuContent.className="content";
+  menuContent.innerHTML=`<h3>Appetizers</h3><ul class="appetizer-list"></ul><input type="text" class="appetizer-input"><button class="add-appetizer">Add</button>
+    <h3>Main Courses</h3><ul class="main-list"></ul><input type="text" class="main-input"><button class="add-main">Add</button>
+    <h3>Desserts</h3><ul class="dessert-list"></ul><input type="text" class="dessert-input"><button class="add-dessert">Add</button>
+    <h3>Drinks</h3><ul class="drink-list"></ul><input type="text" class="drink-input"><button class="add-drink">Add</button>`;
+  sectionDiv.appendChild(menuContent);
+  menuBtn.addEventListener("click",()=>{menuContent.style.display=menuContent.style.display==="block"?"none":"block";});
+
+  // Load saved section menu
+  ["appetizer","main","dessert","drink"].forEach(cat=>{
+    const listEl=menuContent.querySelector(`.${cat}-list`);
+    const inputEl=menuContent.querySelector(`.${cat}-input`);
+    const addBtn=menuContent.querySelector(`.add-${cat}`);
+    if(savedData[section]?.[cat]) savedData[section][cat].forEach(i=>listEl.appendChild(Object.assign(document.createElement("li"),{textContent:i})));
+    addBtn.onclick=()=>{if(inputEl.value.trim()){listEl.appendChild(Object.assign(document.createElement("li"),{textContent:inputEl.value}));inputEl.value="";saveTasks();}};
+  });
 
   container.appendChild(sectionDiv);
 }
@@ -210,7 +292,12 @@ function saveTasks(){
     const budgetRows=Array.from(sec.querySelectorAll("tbody tr")).map(r=>({name:r.children[0].textContent,cost:parseFloat(r.children[1].textContent)}));
     const have=Array.from(sec.querySelectorAll(".have-list li")).map(li=>li.textContent);
     const need=Array.from(sec.querySelectorAll(".need-list li")).map(li=>li.textContent);
-    data[title]={tasks,budget:budgetRows,have,need};
+    const menu={};
+    ["appetizer","main","dessert","drink"].forEach(cat=>{
+      const listEl=sec.querySelector(`.${cat}-list`);
+      menu[cat]=Array.from(listEl?listEl.children:[]).map(li=>li.textContent);
+    });
+    data[title]={tasks,budget:budgetRows,have,need,...menu};
   });
   localStorage.setItem("gardenPlannerData",JSON.stringify(data));
   updateOverallSummary();
@@ -253,17 +340,4 @@ menuCategories.forEach(cat=>{
   const ul=section.querySelector(".item-list");
   const input=section.querySelector("input");
   const btn=section.querySelector("button");
-  if(menuData[cat]) menuData[cat].forEach(item=>{ const li=document.createElement("li"); li.textContent=item; ul.appendChild(li);});
-  btn.onclick=()=>{if(input.value.trim()){ const li=document.createElement("li"); li.textContent=input.value; ul.appendChild(li); input.value=""; saveMenu();}};
-});
-function saveMenu(){
-  menuCategories.forEach(cat=>{
-    const section=document.querySelector(`.menu-section[data-category="${cat}"]`);
-    const items=Array.from(section.querySelectorAll("ul.item-list li")).map(li=>li.textContent);
-    menuData[cat]=items;
-  });
-  localStorage.setItem("gardenMenuData",JSON.stringify(menuData));
-}
-</script>
-</body>
-</html>
+  if(menuData[cat]) menuData[cat].forEach(item
