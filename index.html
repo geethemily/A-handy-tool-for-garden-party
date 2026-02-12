@@ -136,6 +136,271 @@ function saveMenu(){
     });
     localStorage.setItem("gardenMenuData", JSON.stringify(menuData));
 }
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Garden Party Planner with PDF Export</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #f4f7f2;
+    color: #2f3e2f;
+}
+header {
+    text-align: center;
+    padding: 40px 20px;
+    background: linear-gradient(to right, #cde5cd, #eaf4ea);
+}
+header h1 { margin: 0; font-size: 2.2rem; }
+header p { margin-top: 10px; font-size: 1.1rem; opacity: 0.8; }
+.container { max-width: 1000px; margin: 30px auto; padding: 20px; }
+.section {
+    padding: 25px;
+    margin-bottom: 25px;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+}
+.section:nth-child(odd) { background-color: #eaf4ea; }
+.section:nth-child(even) { background-color: #d1e7d1; }
+.section h2, .section h3 { margin-top: 0; color: #3b5d3b; }
+.task-item { display: flex; align-items: center; margin-bottom: 10px; }
+.task-item input[type="checkbox"] { margin-right: 10px; }
+table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+table th, table td { border: 1px solid #ddd; padding: 8px; }
+table th { background-color: #cde5cd; text-align: left; }
+input[type="text"], input[type="number"], textarea { width: 90%; padding: 6px; border-radius: 4px; border: 1px solid #ccc; margin-top: 5px; }
+button { padding: 8px 16px; margin-top: 8px; background-color: #3b5d3b; color: white; border: none; border-radius: 6px; cursor: pointer; transition: background-color 0.3s ease; }
+button:hover { background-color: #2f4b2f; }
+.total-cost { margin-top: 10px; font-weight: bold; font-size: 1rem; }
+#overall-summary { background-color: #cde5cd; padding: 15px; border-radius: 10px; font-weight: bold; margin-bottom: 25px; text-align: center; }
+.list-container { margin-top: 15px; }
+.list-container ul { padding-left: 20px; }
+.list-container li { margin-bottom: 5px; }
+/* Collapsible Menu */
+.collapsible { background-color: #8fcf8f; color: white; cursor: pointer; padding: 10px; width: 100%; text-align: left; border: none; outline: none; font-size: 1rem; border-radius: 5px; margin-top: 15px; }
+.active, .collapsible:hover { background-color: #6bb36b; }
+.content { padding: 0 10px; display: none; overflow: hidden; background-color: #f4f7f2; margin-top: 5px; border-radius: 5px; border: 1px solid #cde5cd; }
+#export-btn { margin-bottom: 20px; background-color: #6b8f6b; }
+#export-btn:hover { background-color: #4b704b; }
+</style>
+</head>
+<body>
+
+<header>
+    <h1>Interactive Garden Party Planner</h1>
+    <p>Tasks, Budget, Have/Need Lists, Menu Creation, Auto-save, PDF Export</p>
+</header>
+
+<div class="container">
+    <button id="export-btn">Export Planner as PDF</button>
+    <div id="overall-summary">Total Cost Across All Timelines: $0</div>
+    <div id="planner-container"></div>
+</div>
+
+<!-- jsPDF & html2canvas -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script>
+// ===== Preloaded Timeline Tasks =====
+const tasksData = {
+    "1–2 Weeks Before: Planning & Foundations": [
+        "Decide purpose & vibe", "Set date/time/guest count", "Choose theme/color palette",
+        "Create rough budget", "Plan menu", "Check weather/backup plan",
+        "Make guest list & send invites", "List what you have vs need"
+    ],
+    "5–7 Days Before: Prep Mode": [
+        "Finalize menu & drinks", "Shop non-perishables", "Drinks & ice plan",
+        "Disposable items", "Arrange rentals", "Plan seating", "Test lighting",
+        "Prepare playlist", "Tidy garden"
+    ]
+    // Add remaining timelines as needed...
+};
+
+const container = document.getElementById("planner-container");
+const overallSummaryEl = document.getElementById("overall-summary");
+let savedData = JSON.parse(localStorage.getItem("gardenPlannerData")) || {};
+
+// ===== Render Sections =====
+for (let section in tasksData) {
+    const sectionDiv = document.createElement("div");
+    sectionDiv.className = "section";
+
+    const h2 = document.createElement("h2");
+    h2.textContent = section;
+    sectionDiv.appendChild(h2);
+
+    // Task list
+    tasksData[section].forEach((task, idx) => {
+        const taskDiv = document.createElement("div");
+        taskDiv.className = "task-item";
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        if (savedData[section] && savedData[section].tasks && savedData[section].tasks[idx]) {
+            checkbox.checked = savedData[section].tasks[idx];
+        }
+        checkbox.onchange = saveTasks;
+        const span = document.createElement("span");
+        span.textContent = task;
+        taskDiv.appendChild(checkbox);
+        taskDiv.appendChild(span);
+        sectionDiv.appendChild(taskDiv);
+    });
+
+    // ===== Budget Table =====
+    const budgetTable = document.createElement("table");
+    budgetTable.innerHTML = `<thead>
+        <tr><th>Item</th><th>Cost ($)</th><th>Action</th></tr>
+    </thead><tbody></tbody>`;
+    sectionDiv.appendChild(budgetTable);
+    const tbody = budgetTable.querySelector("tbody");
+
+    const budgetInputDiv = document.createElement("div");
+    budgetInputDiv.style.marginTop = "10px";
+    budgetInputDiv.innerHTML = `
+        <input type="text" placeholder="Item name" class="budget-item-name">
+        <input type="number" placeholder="Estimated cost" class="budget-item-cost">
+        <button>Add Item</button>
+        <div class="total-cost">Total: $0</div>`;
+    sectionDiv.appendChild(budgetInputDiv);
+
+    const addBudgetBtn = budgetInputDiv.querySelector("button");
+    const itemNameInput = budgetInputDiv.querySelector(".budget-item-name");
+    const itemCostInput = budgetInputDiv.querySelector(".budget-item-cost");
+    const totalCostEl = budgetInputDiv.querySelector(".total-cost");
+    let sectionTotal = 0;
+
+    if (savedData[section] && savedData[section].budget) {
+        savedData[section].budget.forEach(b => {
+            const row = createBudgetRow(b.name, b.cost, tbody, totalCostEl);
+            tbody.appendChild(row);
+            sectionTotal += b.cost;
+        });
+        totalCostEl.textContent = `Total: $${sectionTotal.toFixed(2)}`;
+    }
+
+    addBudgetBtn.onclick = () => {
+        const name = itemNameInput.value.trim();
+        const cost = parseFloat(itemCostInput.value);
+        if (!name || isNaN(cost)) return;
+        const row = createBudgetRow(name, cost, tbody, totalCostEl);
+        tbody.appendChild(row);
+        sectionTotal += cost;
+        totalCostEl.textContent = `Total: $${sectionTotal.toFixed(2)}`;
+        itemNameInput.value = ""; itemCostInput.value = "";
+        saveTasks();
+    };
+
+    // ===== Have / Need Lists =====
+    const listsContainer = document.createElement("div");
+    listsContainer.className = "list-container";
+    listsContainer.innerHTML = `
+        <h3>Things You Have</h3>
+        <ul class="have-list"></ul>
+        <input type="text" placeholder="Add item" class="have-input"><button class="have-add">Add</button>
+        <h3>Things to Buy / Rent</h3>
+        <ul class="need-list"></ul>
+        <input type="text" placeholder="Add item" class="need-input"><button class="need-add">Add</button>
+    `;
+    sectionDiv.appendChild(listsContainer);
+
+    const haveListEl = listsContainer.querySelector(".have-list");
+    const needListEl = listsContainer.querySelector(".need-list");
+    const haveInput = listsContainer.querySelector(".have-input");
+    const needInput = listsContainer.querySelector(".need-input");
+
+    const haveAddBtn = listsContainer.querySelector(".have-add");
+    const needAddBtn = listsContainer.querySelector(".need-add");
+
+    if (savedData[section] && savedData[section].have) savedData[section].have.forEach(i=>haveListEl.appendChild(Object.assign(document.createElement("li"), {textContent:i})));
+    if (savedData[section] && savedData[section].need) savedData[section].need.forEach(i=>needListEl.appendChild(Object.assign(document.createElement("li"), {textContent:i})));
+
+    haveAddBtn.onclick = ()=>{if(haveInput.value.trim()){const li=document.createElement("li");li.textContent=haveInput.value;haveListEl.appendChild(li);haveInput.value="";saveTasks();}};
+    needAddBtn.onclick = ()=>{if(needInput.value.trim()){const li=document.createElement("li");li.textContent=needInput.value;needListEl.appendChild(li);needInput.value="";saveTasks();}};
+
+    // ===== Menu Creation Collapsible =====
+    const menuBtn = document.createElement("button");
+    menuBtn.className = "collapsible";
+    menuBtn.textContent = "Menu Creation";
+    sectionDiv.appendChild(menuBtn);
+
+    const menuContent = document.createElement("div");
+    menuContent.className = "content";
+    menuContent.innerHTML = `
+        <h3>Appetizers</h3><ul class="appetizer-list"></ul><input type="text" class="appetizer-input"><button class="add-appetizer">Add</button>
+        <h3>Main Courses</h3><ul class="main-list"></ul><input type="text" class="main-input"><button class="add-main">Add</button>
+        <h3>Desserts</h3><ul class="dessert-list"></ul><input type="text" class="dessert-input"><button class="add-dessert">Add</button>
+        <h3>Drinks</h3><ul class="drink-list"></ul><input type="text" class="drink-input"><button class="add-drink">Add</button>`;
+    sectionDiv.appendChild(menuContent);
+
+    menuBtn.addEventListener("click",()=>{menuContent.style.display=menuContent.style.display==="block"?"none":"block";});
+
+    // Load saved menu
+    ["appetizer","main","dessert","drink"].forEach(cat=>{
+        const listEl=menuContent.querySelector(`.${cat}-list`);
+        const inputEl=menuContent.querySelector(`.${cat}-input`);
+        const addBtn=menuContent.querySelector(`.add-${cat}`);
+        if(savedData[section] && savedData[section][cat]) savedData[section][cat].forEach(i=>listEl.appendChild(Object.assign(document.createElement("li"),{textContent:i})));
+        addBtn.onclick=()=>{if(inputEl.value.trim()){listEl.appendChild(Object.assign(document.createElement("li"),{textContent:inputEl.value}));inputEl.value="";saveTasks();}};
+    });
+
+    container.appendChild(sectionDiv);
+}
+
+// ===== Create Budget Row =====
+function createBudgetRow(name,cost,tbody,totalCostEl){
+    const row=document.createElement("tr");
+    row.innerHTML=`<td>${name}</td><td>${cost.toFixed(2)}</td><td><button style="background-color:#c94b4b;">Delete</button></td>`;
+    row.querySelector("button").onclick=()=>{tbody.removeChild(row);saveTasks();};
+    return row;
+}
+
+// ===== Save All Data =====
+function saveTasks(){
+    const sections=container.querySelectorAll(".section");
+    const data={};
+    sections.forEach(sec=>{
+        const title=sec.querySelector("h2").textContent;
+        const tasks=Array.from(sec.querySelectorAll(".task-item input[type='checkbox']")).map(cb=>cb.checked);
+        const budgetRows=Array.from(sec.querySelectorAll("tbody tr")).map(r=>({name:r.children[0].textContent,cost:parseFloat(r.children[1].textContent)}));
+        const have=Array.from(sec.querySelectorAll(".have-list li")).map(li=>li.textContent);
+        const need=Array.from(sec.querySelectorAll(".need-list li")).map(li=>li.textContent);
+        const menu={};
+        ["appetizer","main","dessert","drink"].forEach(cat=>{
+            const listEl=sec.querySelector(`.${cat}-list`);
+            menu[cat]=Array.from(listEl?listEl.children:[]).map(li=>li.textContent);
+        });
+        data[title]={tasks,budget:budgetRows,have,need,...menu};
+    });
+    localStorage.setItem("gardenPlannerData",JSON.stringify(data));
+    updateOverallSummary();
+}
+
+// ===== Update Overall Summary =====
+function updateOverallSummary(){
+    const data=JSON.parse(localStorage.getItem("gardenPlannerData"))||{};
+    let total=0;
+    for(let section in data){if(data[section].budget) total+=data[section].budget.reduce((sum,b)=>sum+b.cost,0);}
+    overallSummaryEl.textContent=`Total Cost Across All Timelines: $${total.toFixed(2)}`;
+}
+updateOverallSummary();
+
+// ===== Export PDF =====
+document.getElementById("export-btn").onclick = async ()=>{
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p','pt','a4');
+    const containerEl=document.querySelector(".container");
+    await html2canvas(containerEl,{scale:2}).then(canvas=>{
+        const imgData=canvas.toDataURL("image/png");
+        const imgWidth=595;
+        const imgHeight=canvas.height * imgWidth / canvas.width;
+        doc.addImage(imgData,'PNG',0,0,imgWidth,imgHeight);
+    });
+    doc.save("GardenPartyPlanner.pdf");
+};
 </script>
 
 </body>
