@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interactive Garden Party Planner</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #f4f7f2;
+    color: #2f3e2f;
+}
+
+header {
+    text-align: center;
+    padding: 40px 20px;
+    background: linear-gradient(to right, #cde5cd, #eaf4ea);
+}
+
+header h1 {
+    margin: 0;
+    font-size: 2.2rem;
+}
+
+header p {
+    margin-top: 10px;
+    font-size: 1.1rem;
+    opacity: 0.8;
+}
+
+.container {
+    max-width: 1000px;
+    margin: 30px auto;
+    padding: 20px;
+}
+
+.section {
+    background: white;
+    padding: 25px;
+    margin-bottom: 25px;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+}
+
+.section h2 {
+    margin-top: 0;
+    color: #3b5d3b;
+}
+
+/* Task checklist */
+.task-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.task-item input[type="checkbox"] {
+    margin-right: 10px;
+}
+
+/* Budget table */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+table th, table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+
+table th {
+    background-color: #cde5cd;
+    text-align: left;
+}
+
+input[type="text"], input[type="number"] {
+    width: 90%;
+    padding: 6px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
+
+button {
+    padding: 10px 20px;
+    margin-top: 10px;
+    background-color: #3b5d3b;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #2f4b2f;
+}
+
+.total-cost {
+    margin-top: 15px;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>Interactive Garden Party Planner</h1>
+    <p>Check off tasks and manage your budget for the perfect garden party!</p>
+</header>
+
+<div class="container">
+
+    <!-- Task Checklist Section -->
+    <div class="section">
+        <h2>Tasks Timeline</h2>
+        <div id="tasks-list">
+            <!-- Preloaded tasks will appear here -->
+        </div>
+    </div>
+
+    <!-- Budget Section -->
+    <div class="section">
+        <h2>Budget Planner</h2>
+        <table id="budget-table">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Estimated Cost ($)</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Budget items appear here -->
+            </tbody>
+        </table>
+        <input type="text" id="item-name" placeholder="Item name">
+        <input type="number" id="item-cost" placeholder="Estimated cost">
+        <button onclick="addBudgetItem()">Add Item</button>
+        <div class="total-cost" id="total-cost">Total: $0</div>
+    </div>
+
+</div>
+
+<script>
+// ===== Preloaded Tasks =====
+const tasksData = {
+    "1–2 Weeks Before: Planning & Foundations": [
+        "Decide the purpose & vibe (casual brunch, evening cocktails, BBQ, etc.)",
+        "Set a date, time, and guest count",
+        "Choose a theme / color palette",
+        "Create a rough budget",
+        "Plan the menu (homemade vs catered vs potluck)",
+        "Check weather patterns + decide on a backup plan",
+        "Make a guest list and send invites",
+        "List what you already have vs what you need (tables, chairs, lights, serveware)"
+    ],
+    "5–7 Days Before: Prep Mode": [
+        "Finalize the menu & drinks",
+        "Order or shop for non-perishable food",
+        "Drinks & ice plan",
+        "Disposable items (napkins, cups, plates if needed)",
+        "Arrange rentals (chairs, tables, umbrellas, heaters)",
+        "Plan seating & table layout",
+        "Test outdoor lighting",
+        "Prepare a playlist",
+        "Tidy the garden (weeding, sweeping, pruning)"
+    ],
+    "2–3 Days Before: Execution Begins": [
+        "Grocery shop for fresh ingredients",
+        "Clean outdoor space",
+        "Clean bathrooms",
+        "Clean kitchen",
+        "Prep make-ahead foods (sauces, marinades, desserts)",
+        "Chill drinks that can be chilled early",
+        "Iron / set aside table linens",
+        "Charge speakers, lights, candles, power banks"
+    ],
+    "1 Day Before: Set the Stage": [
+        "Arrange tables and chairs",
+        "Set up tablecloths",
+        "Set up centerpieces",
+        "String lights / candles",
+        "Prep serving trays & label dishes if needed",
+        "Final garden sweep",
+        "Confirm RSVPs",
+        "Lay out an event-day checklist",
+        "Get a good night’s sleep (underrated but critical)"
+    ],
+    "Day Of – Morning": [
+        "Light cleaning touch-ups",
+        "Finish food prep",
+        "Chill drinks & prep ice",
+        "Set up drink station",
+        "Place trash & recycling bins discreetly",
+        "Do a walk-through of the flow (entry → seating → food → drinks)"
+    ],
+    "1 Hour Before Guests Arrive": [
+        "Final table setting",
+        "Food out (or warming)",
+        "Background music on",
+        "Candles/lights ready",
+        "Change into hosting outfit",
+        "Deep breath + mindset shift from manager → host"
+    ],
+    "During the Party": [
+        "Greet guests",
+        "Refill drinks & food as needed",
+        "Quietly manage timing",
+        "Take photos (or assign someone)",
+        "Let go of perfection"
+    ],
+    "After the Party": [
+        "Clear food safely",
+        "Quick cleanup (trash, dishes soak)",
+        "Leave deep cleaning for the next day",
+        "Mentally note what worked & what didn’t"
+    ]
+};
+
+// ===== Render Tasks =====
+const tasksList = document.getElementById("tasks-list");
+
+for (let section in tasksData) {
+    const sectionDiv = document.createElement("div");
+    sectionDiv.className = "section";
+    
+    const h3 = document.createElement("h3");
+    h3.textContent = section;
+    sectionDiv.appendChild(h3);
+    
+    tasksData[section].forEach(task => {
+        const taskDiv = document.createElement("div");
+        taskDiv.className = "task-item";
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        const span = document.createElement("span");
+        span.textContent = task;
+        taskDiv.appendChild(checkbox);
+        taskDiv.appendChild(span);
+        sectionDiv.appendChild(taskDiv);
+    });
+    
+    tasksList.appendChild(sectionDiv);
+}
+
+// ===== Budget Planner =====
+const budgetTableBody = document.querySelector("#budget-table tbody");
+const totalCostEl = document.getElementById("total-cost");
+let totalCost = 0;
+
+function addBudgetItem() {
+    const nameInput = document.getElementById("item-name");
+    const costInput = document.getElementById("item-cost");
+    
+    const name = nameInput.value.trim();
+    const cost = parseFloat(costInput.value);
+    
+    if(name === "" || isNaN(cost)) return;
+    
+    const row = document.createElement("tr");
+    
+    const itemCell = document.createElement("td");
+    itemCell.textContent = name;
+    
+    const costCell = document.createElement("td");
+    costCell.textContent = cost.toFixed(2);
+    
+    const actionCell = document.createElement("td");
+    const deleteBtn = document.createElement("button");
+    deleteBtn.textContent = "Delete";
+    deleteBtn.style.backgroundColor = "#c94b4b";
+    deleteBtn.style.margin = "0";
+    deleteBtn.onclick = () => {
+        budgetTableBody.removeChild(row);
+        totalCost -= cost;
+        updateTotalCost();
+    };
+    actionCell.appendChild(deleteBtn);
+    
+    row.appendChild(itemCell);
+    row.appendChild(costCell);
+    row.appendChild(actionCell);
+    
+    budgetTableBody.appendChild(row);
+    
+    totalCost += cost;
+    updateTotalCost();
+    
+    nameInput.value = "";
+    costInput.value = "";
+}
+
+function updateTotalCost() {
+    totalCostEl.textContent = `Total: $${totalCost.toFixed(2)}`;
+}
+</script>
+
+</body>
+</html>
